@@ -1,0 +1,28 @@
+{
+    "id": "openfolder-links",
+    "name": "OpenFolder Links",
+    "description": "Turns UNC paths (\\\\server\\share\\...) on allowed file servers into clickable openfolder: links that open the folder in Windows Explorer. The path stays visible and copyable.",
+    "homepage_url": "https://github.com/rokemHB/mattermost_openfolder",
+    "support_url": "https://github.com/rokemHB/mattermost_openfolder/issues",
+    "version": "1.0.1",
+    "min_server_version": "8.0.0",
+    "server": {
+        "executables": {
+            "linux-amd64": "server/dist/plugin-linux-amd64",
+            "linux-arm64": "server/dist/plugin-linux-arm64"
+        }
+    },
+    "settings_schema": {
+        "header": "UNC paths on the servers below are converted into links when a message is posted. Clients need the openfolder: protocol handler installed (see client/windows in the repository).",
+        "settings": [
+            {
+                "key": "Servers",
+                "display_name": "Allowed file servers",
+                "type": "text",
+                "default": "",
+                "placeholder": "fileserver.example.com, nas.example.org",
+                "help_text": "Host names, separated by commas. Leave empty to disable the plugin. Keep this list in sync with allowed-servers.txt on the Windows clients."
+            }
+        ]
+    }
+}

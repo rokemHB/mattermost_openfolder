@@ -1,0 +1,20 @@
+Windows Registry Editor Version 5.00
+
+; Manual registration of the openfolder: protocol (alternative to
+; install-openfolder.ps1, e.g. for Group Policy or software deployment).
+;
+; Before importing:
+;   1. Copy openfolder.ps1 and allowed-servers.txt to one folder,
+;      e.g. C:\Program Files\OpenFolder\
+;   2. Adjust the path below (backslashes must be doubled).
+;
+; HKEY_CURRENT_USER registers the protocol for the current user only.
+; For all users of a machine, replace HKEY_CURRENT_USER\Software\Classes
+; with HKEY_LOCAL_MACHINE\SOFTWARE\Classes (requires administrator rights).
+
+[HKEY_CURRENT_USER\Software\Classes\openfolder]
+@="URL:Open Folder"
+"URL Protocol"=""
+
+[HKEY_CURRENT_USER\Software\Classes\openfolder\shell\open\command]
+@="powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File \"C:\\Program Files\\OpenFolder\\openfolder.ps1\" \"%1\""

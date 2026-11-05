@@ -1,0 +1,12 @@
+# Servers whose folders may be opened via openfolder: links.
+# One host name per line, exactly as it appears in the UNC path
+# (\\fileserver.example.com\share  ->  fileserver.example.com).
+# Lines starting with "#" are ignored. Matching is case-insensitive.
+#
+# If the same server is reachable under several names (short name, FQDN,
+# IP address), list every variant that is used in posted links.
+#
+# Keep this list in sync with the "Allowed file servers" setting of the
+# Mattermost plugin.
+
+fileserver.example.com
