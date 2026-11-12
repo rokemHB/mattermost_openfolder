@@ -3,14 +3,14 @@
 [![CI](https://github.com/rokemHB/mattermost_openfolder/actions/workflows/ci.yml/badge.svg)](https://github.com/rokemHB/mattermost_openfolder/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-Click a network folder path in Mattermost and it opens in Windows Explorer.
+Click a network path in Mattermost and it opens in Windows Explorer. Links to a file open its folder with the file selected.
 
 Teams often share paths like `\\fileserver.example.com\projects\2026` in chat. Mattermost cannot open them: browsers and the desktop app deliberately block `file:` links from web content. This project solves that with two small parts:
 
 | Part | Where it runs | What it does |
 | --- | --- | --- |
 | **Server plugin** | Mattermost server | Turns UNC paths on allowed servers into clickable `openfolder:` links when a message is posted. |
-| **Protocol handler** | Each Windows client | Registers the `openfolder:` protocol and opens the folder in Explorer, after strict safety checks. |
+| **Protocol handler** | Each Windows client | Registers the `openfolder:` protocol and opens the folder in Explorer, after strict safety checks. For a file, it opens the containing folder and selects the file. |
 
 ## How it works
 
@@ -32,6 +32,7 @@ The path stays visible exactly as typed and can still be copied. The link only w
 - Leaves code blocks, existing Markdown links and other servers untouched
 - Runs before the post is saved: no bot replies, no "(edited)" marker
 - Also applies when a message is edited, and upgrades links written by older versions
+- Links to files open the containing folder with the file selected, without opening the file
 - Allow-list of servers on both sides (plugin and client)
 
 ## Requirements
@@ -80,8 +81,8 @@ Anyone who can post in Mattermost can create an `openfolder:` link, so the handl
 | --- | --- |
 | Must be a UNC path `\\server\share\...` | Local paths, drive letters, device paths (`\\?\`, `\\.\`) |
 | Server must be in `allowed-servers.txt` (exact host match, checked **before** any network access) | Look-alike hosts and links to external servers that could capture Windows logon hashes (NTLM) |
-| No `..` path segments | Escaping to another share or location |
-| Target must be an existing **folder** | Opening or running files, scripts or executables |
+| No `..` path segments, no double quotes | Escaping to another share or location; breaking out of the quoted argument |
+| Target must exist. A **folder** is opened; a **file** is only selected in its folder (`explorer /select`) | Opening or running files, scripts or executables |
 
 The path is passed to Explorer as a single quoted argument and is never evaluated as a command. Explorer runs with the user's own permissions, so folders the user cannot access stay inaccessible. The handler makes no other network connections and sends no data anywhere.
 
@@ -117,7 +118,7 @@ Pushing a tag such as `v1.0.1` builds the bundle in GitHub Actions and publishes
 ├── client/windows/              Protocol handler for Windows
 │   ├── install-openfolder.cmd   Double-click installer
 │   ├── install-openfolder.ps1   Installer / uninstaller
-│   ├── openfolder.ps1           The handler that opens the folder
+│   ├── openfolder.ps1           The handler that opens the folder or selects the file
 │   ├── allowed-servers.txt      Server allow-list
 │   └── openfolder.reg           Registry template for manual deployment
 └── Makefile                     Test and build targets
@@ -130,7 +131,8 @@ Pushing a tag such as `v1.0.1` builds the bundle in GitHub Actions and publishes
 | Windows asks to "get an app" for this link | The handler is not installed for this user. Run `install-openfolder.cmd` again as a normal user, not as administrator. |
 | Path is not turned into a link | The server is missing from the plugin settings, or the message was sent before the plugin was enabled. Editing and saving the message converts it. |
 | Link is not clickable | `openfolder` is missing under Custom URL Schemes. Reload Mattermost after adding it. |
-| Click does nothing | The server is missing from `allowed-servers.txt`, the folder does not exist, or the user has no access. |
+| Click does nothing | The server is missing from `allowed-servers.txt`, the folder or file does not exist, or the user has no access. |
+| A file link does nothing, folder links work | The client still runs an older handler. Run `install-openfolder.cmd` again. |
 | "Encountered an error when extracting the plugin" | The bundle was repacked without directory entries. Use the release file or `make dist`. |
 
 ## License

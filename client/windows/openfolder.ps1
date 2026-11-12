@@ -7,13 +7,15 @@
         openfolder://fileserver.example.com/share/Projects%202026
     It converts the link to a UNC path
         \\fileserver.example.com\share\Projects 2026
-    and opens it in Windows Explorer.
+    and opens it in Windows Explorer. If the link points to a file, Explorer
+    opens the containing folder with that file selected (highlighted), exactly
+    like a single click on it - the file itself is never opened or run.
 
     Safety rules (in this order, before any network access):
       1. Only UNC paths are accepted (no drive letters, no device paths).
       2. The server must be listed in allowed-servers.txt next to this script.
-      3. Paths containing ".." segments are rejected.
-      4. The target must be an existing folder. Files are never opened or run.
+      3. Paths containing ".." segments or double quotes are rejected.
+      4. The target must exist: a folder is opened, a file is only selected.
 
     Anything that fails a check is silently ignored.
 #>
@@ -38,7 +40,13 @@ $p = '\\' + $p.TrimStart('\')
 if ($p -notmatch '^\\\\([^\\]+)\\[^\\]') { exit 1 }
 if ($allowed -notcontains $Matches[1]) { exit 1 }   # case-insensitive
 if ($p -match '\\\.\.(\\|$)') { exit 1 }
+if ($p.Contains('"')) { exit 1 }   # cannot occur in Windows paths; keeps the argument quoting intact
 
 if (Test-Path -LiteralPath $p -PathType Container) {
-    Start-Process -FilePath explorer.exe -ArgumentList "`"$p`""
+    # Folder: open it. A trailing backslash is dropped so it cannot escape the closing quote.
+    Start-Process -FilePath explorer.exe -ArgumentList "`"$($p.TrimEnd('\'))`""
+}
+elseif (Test-Path -LiteralPath $p -PathType Leaf) {
+    # File: open the containing folder with the file selected. /select never opens the file.
+    Start-Process -FilePath explorer.exe -ArgumentList "/select,`"$p`""
 }
