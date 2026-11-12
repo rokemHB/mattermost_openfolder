@@ -16,9 +16,9 @@ import (
 //	[`\\fileserver.example.com\share\Projects 2026`](openfolder://fileserver.example.com/share/Projects%202026)
 //
 // Recognised forms:
-//   - bare path: runs to the end of the line (spaces allowed); it stops early
-//     before another path or URL, and trailing punctuation is trimmed
+//   - bare path: see barePathLen for how far it reaches
 //   - path in "quotes", „German quotes“ or `backticks`: exactly the quoted text
+//     (the reliable way to post a path whose last part contains spaces)
 //   - file://server/... URLs
 //
 // Fenced code blocks and existing Markdown links are left untouched, so
@@ -137,7 +137,7 @@ func (c *Converter) convertLine(s string) string {
 			if loc := c.reCut.FindStringIndex(p); loc != nil {
 				p = p[:loc[0]]
 			}
-			p = trimTrailing(p)
+			p = trimTrailing(p[:barePathLen(p)])
 			out.WriteString(link(p))
 			i += len(p)
 			continue
@@ -148,6 +148,78 @@ func (c *Converter) convertLine(s string) string {
 		i++
 	}
 	return out.String()
+}
+
+var (
+	// reSentenceBreak marks text that reads like a sentence, not like a folder name.
+	reSentenceBreak = regexp.MustCompile(`[,;:!?.]\s`)
+	// reFileName is a word that ends in a file extension: at least one character
+	// before the dot, 2-5 letters or digits after it, at least one of them a
+	// letter (report.docx, archive.7z; not .cmd, z.B., v1.2).
+	reFileName = regexp.MustCompile(`^[^.\s][^\s]*\.([A-Za-z0-9]{2,5})$`)
+	reLetter   = regexp.MustCompile(`[A-Za-z]`)
+)
+
+// maxFileNameWords limits how many space-separated words a file name at the
+// end of a bare path may have ("Final report v2.docx" = 3).
+const maxFileNameWords = 6
+
+// barePathLen decides where a bare (unquoted) UNC path ends. s starts with
+// \\server\ and is already cut before the next path or URL on the line.
+//
+//   - Folder names before a backslash may contain spaces, unless they read
+//     like a sentence ("x, see"): \\srv\Projects 2026\Data
+//   - The last part ends at the first space, so text after the path stays
+//     text: \\srv\share\Folder please check  ->  \\srv\share\Folder
+//   - Exception: if a file name with an extension follows within a few words,
+//     the last part runs up to it: \\srv\share\Final report v2.docx
+//
+// A last folder name with spaces needs quotes or backticks to be linked in
+// full. If a link is cut short anyway, the Windows handler opens the nearest
+// existing parent folder.
+func barePathLen(s string) int {
+	pos := strings.Index(s[2:], `\`) + 3 // first character after \\server\
+	for {
+		j := strings.Index(s[pos:], `\`)
+		if j < 0 {
+			break
+		}
+		seg := s[pos : pos+j]
+		if strings.ContainsAny(seg, " \t") && reSentenceBreak.MatchString(seg+" ") {
+			break
+		}
+		pos += j + 1
+	}
+
+	// Last part: up to the first space, or up to a file name a few words on.
+	end := pos
+	for end < len(s) && s[end] != ' ' && s[end] != '\t' {
+		end++
+	}
+	if end == len(s) || isFileName(s[pos:end]) {
+		return end
+	}
+	words := strings.Fields(s[pos:])
+	stop := pos
+	for n, w := range words {
+		if n >= maxFileNameWords {
+			break
+		}
+		stop = strings.Index(s[stop:], w) + stop + len(w)
+		if isFileName(w) {
+			return stop
+		}
+		if n > 0 && strings.ContainsAny(w[len(w)-1:], ",;:!?.") {
+			break // sentence punctuation before any file name
+		}
+	}
+	return end
+}
+
+func isFileName(w string) bool {
+	w = trimTrailing(w)
+	m := reFileName.FindStringSubmatch(w)
+	return m != nil && reLetter.MatchString(m[1])
 }
 
 // trimTrailing removes whitespace and punctuation that most likely belongs to

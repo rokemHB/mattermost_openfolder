@@ -28,7 +28,8 @@ The path stays visible exactly as typed and can still be copied. The link only w
 ## Features
 
 - Converts bare UNC paths, paths in quotes (`"…"`, `„…“`) or backticks, and `file://server/...` URLs
-- Paths with spaces are supported; trailing punctuation is trimmed, balanced brackets are kept
+- Paths with spaces in folder names and file names (`\\server\Projects 2026\Final report.docx`); text after the path stays plain text
+- Trailing punctuation is trimmed, balanced brackets are kept
 - Leaves code blocks, existing Markdown links and other servers untouched
 - Runs before the post is saved: no bot replies, no "(edited)" marker
 - Also applies when a message is edited, and upgrades links written by older versions
@@ -82,7 +83,7 @@ Anyone who can post in Mattermost can create an `openfolder:` link, so the handl
 | Must be a UNC path `\\server\share\...` | Local paths, drive letters, device paths (`\\?\`, `\\.\`) |
 | Server must be in `allowed-servers.txt` (exact host match, checked **before** any network access) | Look-alike hosts and links to external servers that could capture Windows logon hashes (NTLM) |
 | No `..` path segments, no double quotes | Escaping to another share or location; breaking out of the quoted argument |
-| Target must exist. A **folder** is opened; a **file** is only selected in its folder (`explorer /select`) | Opening or running files, scripts or executables |
+| A **folder** is opened; a **file** is only selected in its folder (`explorer /select`). If the target does not exist, the nearest existing parent folder on the same share is opened | Opening or running files, scripts or executables |
 
 The path is passed to Explorer as a single quoted argument and is never evaluated as a command. Explorer runs with the user's own permissions, so folders the user cannot access stay inaccessible. The handler makes no other network connections and sends no data anywhere.
 
@@ -131,7 +132,9 @@ Pushing a tag such as `v1.0.1` builds the bundle in GitHub Actions and publishes
 | Windows asks to "get an app" for this link | The handler is not installed for this user. Run `install-openfolder.cmd` again as a normal user, not as administrator. |
 | Path is not turned into a link | The server is missing from the plugin settings, or the message was sent before the plugin was enabled. Editing and saving the message converts it. |
 | Link is not clickable | `openfolder` is missing under Custom URL Schemes. Reload Mattermost after adding it. |
-| Click does nothing | The server is missing from `allowed-servers.txt`, the folder or file does not exist, or the user has no access. |
+| Click does nothing | The server is missing from `allowed-servers.txt`, the share is unreachable, or the user has no access. |
+| Only part of the path is linked | The last folder name contains spaces. In unquoted paths, the last part ends at the first space unless a file name follows. Put the path in quotes or backticks: `` `\\server\share\Old projects` ``. A click on the shortened link still opens the parent folder. |
+| Text after the path became part of the link | The message was sent with plugin 1.0.x. Edit the message and paste the path again; plugin 1.1.0 or later links only the path. |
 | A file link does nothing, folder links work | The client still runs an older handler. Run `install-openfolder.cmd` again. |
 | "Encountered an error when extracting the plugin" | The bundle was repacked without directory entries. Use the release file or `make dist`. |
 

@@ -4,7 +4,7 @@
     "description": "Turns UNC paths (\\\\server\\share\\...) on allowed file servers into clickable openfolder: links that open the folder in Windows Explorer. The path stays visible and copyable.",
     "homepage_url": "https://github.com/rokemHB/mattermost_openfolder",
     "support_url": "https://github.com/rokemHB/mattermost_openfolder/issues",
-    "version": "1.0.1",
+    "version": "1.1.0",
     "min_server_version": "8.0.0",
     "server": {
         "executables": {

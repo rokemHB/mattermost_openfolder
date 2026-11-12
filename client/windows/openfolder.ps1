@@ -15,7 +15,8 @@
       1. Only UNC paths are accepted (no drive letters, no device paths).
       2. The server must be listed in allowed-servers.txt next to this script.
       3. Paths containing ".." segments or double quotes are rejected.
-      4. The target must exist: a folder is opened, a file is only selected.
+      4. A folder is opened, a file is only selected. If the target does not
+         exist, the nearest existing parent folder on the same share is opened.
 
     Anything that fails a check is silently ignored.
 #>
@@ -49,4 +50,16 @@ if (Test-Path -LiteralPath $p -PathType Container) {
 elseif (Test-Path -LiteralPath $p -PathType Leaf) {
     # File: open the containing folder with the file selected. /select never opens the file.
     Start-Process -FilePath explorer.exe -ArgumentList "/select,`"$p`""
+}
+else {
+    # Target not found (renamed, deleted, or a link cut short at a space):
+    # open the nearest existing parent folder, at most up to \\server\share.
+    $q = $p.TrimEnd('\')
+    while ($q -match '^\\\\[^\\]+\\[^\\]+\\.') {
+        $q = $q.Substring(0, $q.LastIndexOf('\'))
+        if (Test-Path -LiteralPath $q -PathType Container) {
+            Start-Process -FilePath explorer.exe -ArgumentList "`"$q`""
+            break
+        }
+    }
 }
